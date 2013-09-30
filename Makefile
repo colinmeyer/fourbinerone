@@ -1,4 +1,4 @@
-PRG            = LDR_light_detect
+PRG            = fourbinerone
 OBJ            = $(PRG).o
 MCU_TARGET     = attiny13a
 AVRDUDE_PART   = t13
