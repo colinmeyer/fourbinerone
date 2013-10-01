@@ -14,25 +14,35 @@
 
 // 4 output LEDs
 // PIN
-// 5 PB0  -->|--ww--GND
-// 6 PB1  -->|--ww--GND
-// 7 PB2  -->|--ww--GND
-// 2 PB3  -->|--ww--GND
+//   5 PB0  -->|--ww--GND
+//   6 PB1  -->|--ww--GND
+//   7 PB2  -->|--ww--GND
+//   2 PB3  -->|--ww--GND
 //
 //
 // 1 input
 // PIN
-// 3 ADC2
-// 3 PB4
+//   3 ADC2 / PINB4
 // 
 
 
-uint8_t display=0; // we'll only use the bottom four bits of this 
+uint8_t display=0;    // we'll only use the bottom four bits of this 
+uint8_t test_input=0; // scratch
+uint8_t input=0;      // last read input
+uint8_t new_input=0;  // flag set when new input is detected
 
 // when the timer sends an interrupt, refresh the display
+// and read input
 ISR(WDT_vect) {
     // display the bottom four bits of display on the LEDs
     PORTB = (PORTB & 0xf0) | (0xf & display);
+
+    // check for button change
+    test_input = PINB & (1<<PB4);
+    if ( input != test_input ) {
+        input = test_input;
+        new_input = 1;
+    }
 }
 
 
@@ -51,11 +61,19 @@ int main(void) {
     sei(); // Enable global interrupts 
 
     while(1) {
-        // binary counter
-        display++; 
-        if (display & 0b10000)
-            display=0;
-        _delay_ms(150);
+        if ( new_input ) {
+            new_input = 0;
+            if ( input ) {
+                // button was just pressed
+                display |= 0b1000;
+            }
+            else {
+                // button was just released
+                display &= 0b0111;
+            }
+        }
+        // XXX not sure why, but we detect no input w/o the following line
+        _delay_ms(1);
     }
     
     return 0;
