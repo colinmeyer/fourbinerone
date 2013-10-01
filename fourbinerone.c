@@ -45,6 +45,12 @@ ISR(WDT_vect) {
     }
 }
 
+uint8_t c=0;
+void bump_count() {
+    c--;
+    c &= 0b11; // c = c % 4
+    display = 1<<c;
+}
 
 int main(void) {
     // PORTB is output for four output LEDs
@@ -60,16 +66,17 @@ int main(void) {
 
     sei(); // Enable global interrupts 
 
+    display = 1;
     while(1) {
         if ( new_input ) {
             new_input = 0;
             if ( input ) {
                 // button was just pressed
-                display |= 0b1000;
+                bump_count();
             }
             else {
                 // button was just released
-                display &= 0b0111;
+                bump_count();
             }
         }
         // XXX not sure why, but we detect no input w/o the following line
