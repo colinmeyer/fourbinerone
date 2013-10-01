@@ -26,10 +26,10 @@
 // 
 
 
-uint8_t display=0;    // we'll only use the bottom four bits of this 
+volatile uint8_t display=0;    // we'll only use the bottom four bits of this 
 uint8_t test_input=0; // scratch
-uint8_t input=0;      // last read input
-uint8_t new_input=0;  // flag set when new input is detected
+volatile uint8_t input=0;      // last read input
+volatile uint8_t new_input=0;  // flag set when new input is detected
 
 // when the timer sends an interrupt, refresh the display
 // and read input
@@ -66,7 +66,6 @@ int main(void) {
 
     sei(); // Enable global interrupts 
 
-    display = 1;
     while(1) {
         if ( new_input ) {
             new_input = 0;
@@ -79,8 +78,6 @@ int main(void) {
                 bump_count();
             }
         }
-        // XXX not sure why, but we detect no input w/o the following line
-        _delay_ms(1);
     }
     
     return 0;
