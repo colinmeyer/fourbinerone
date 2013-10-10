@@ -27,13 +27,15 @@
 
 
 volatile uint8_t display=0;    // we'll only use the bottom four bits of this 
-uint8_t test_input=0; // scratch
 volatile uint8_t input=0;      // last read input
 volatile uint8_t new_input=0;  // flag set when new input is detected
+volatile uint8_t clicks=0;     // count interrupts fired for larger scale timing
 
 // when the timer sends an interrupt, refresh the display
 // and read input
 ISR(WDT_vect) {
+    uint8_t test_input=0; // scratch
+
     // display the bottom four bits of display on the LEDs
     PORTB = (PORTB & 0xf0) | (0xf & display);
 
@@ -43,14 +45,14 @@ ISR(WDT_vect) {
         input = test_input;
         new_input = 1;
     }
+
+    clicks++;
+
+    if ( clicks % 4 == 0 ) {
+        display >>= 1; 
+    }
 }
 
-uint8_t c=0;
-void bump_count() {
-    c--;
-    c &= 0b11; // c = c % 4
-    display = 1<<c;
-}
 
 int main(void) {
     // PORTB is output for four output LEDs
@@ -71,11 +73,11 @@ int main(void) {
             new_input = 0;
             if ( input ) {
                 // button was just pressed
-                bump_count();
+                // turn on the first light
+                display |= 0b1000;
             }
             else {
                 // button was just released
-                bump_count();
             }
         }
     }
