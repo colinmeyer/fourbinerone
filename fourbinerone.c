@@ -47,10 +47,6 @@ ISR(WDT_vect) {
     }
 
     clicks++;
-
-    if ( clicks % 4 == 0 ) {
-        display >>= 1; 
-    }
 }
 
 
@@ -67,7 +63,8 @@ int main(void) {
     WDTCR |= (1<<WDTIE);
 
     sei(); // Enable global interrupts 
-
+    
+    uint8_t next_clicks;
     while(1) {
         if ( new_input ) {
             new_input = 0;
@@ -75,10 +72,17 @@ int main(void) {
                 // button was just pressed
                 // turn on the first light
                 display |= 0b1000;
+                next_clicks = clicks + 4;
             }
             else {
                 // button was just released
             }
+        }
+
+        // rotate display 
+        if (clicks == next_clicks) {
+            next_clicks += 4;
+            display >>= 1;
         }
     }
     
