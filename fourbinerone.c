@@ -26,15 +26,15 @@
 // 
 
 
-volatile uint8_t display=0;    // we'll only use the bottom four bits of this 
-volatile uint8_t input=0;      // last read input
-volatile uint8_t new_input=0;  // flag set when new input is detected
-volatile uint8_t clicks=0;     // count interrupts fired for larger scale timing
+volatile uint8_t display;    // we'll only use the bottom four bits of this 
+volatile uint8_t input;      // last read input
+volatile uint8_t new_input;  // flag set when new input is detected
+volatile uint8_t clicks;     // count interrupts fired for larger scale timing
 
 // when the timer sends an interrupt, refresh the display
 // and read input
 ISR(WDT_vect) {
-    uint8_t test_input=0; // scratch
+    uint8_t test_input; // scratch
 
     // display the bottom four bits of display on the LEDs
     PORTB = (PORTB & 0xf0) | (0xf & display);
