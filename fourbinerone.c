@@ -29,11 +29,11 @@
 volatile uint8_t display;    // we'll only use the bottom four bits of this 
 volatile uint8_t input;      // last read input
 volatile uint8_t new_input;  // flag set when new input is detected
-volatile uint8_t clicks;     // count interrupts fired for larger scale timing
+volatile uint16_t clicks;    // count interrupts fired for larger scale timing
 
 // when the timer sends an interrupt, refresh the display
 // and read input
-ISR(WDT_vect) {
+ISR(TIM0_COMPA_vect) {
     uint8_t test_input; // scratch
 
     // display the bottom four bits of display on the LEDs
@@ -56,15 +56,20 @@ int main(void) {
     // Set up Port B data to be all low
     PORTB = 0;
 
-    // set wdt prescaler
-    WDTCR = (1<<WDP0);   // 4k ~32ms  8.5.2 p.43
+    // set CTC mode - 11.9.1 P.73
+    TCCR0A = 1<<WGM01;
+    // set the clock source and prescaling - 11.9.2 p.73
+    // ((9.6Mhz/8) / 8)*15 = .0001 = 1/10 ms
+    TCCR0B |= (1<<CS01);
+    // set the timer comparison register
+    OCR0A = 15;
 
-    // Enable watchdog timer interrupts
-    WDTCR |= (1<<WDTIE);
+    // enable timer comparison interrupt - 11.9.6 p.75
+    TIMSK0 = 1<<OCIE0A;
 
     sei(); // Enable global interrupts 
     
-    uint8_t next_clicks;
+    uint16_t next_clicks;
     while(1) {
         if ( new_input ) {
             new_input = 0;
@@ -72,7 +77,7 @@ int main(void) {
                 // button was just pressed
                 // turn on the first light
                 display |= 0b1000;
-                next_clicks = clicks + 4;
+                next_clicks = clicks + 10000;
             }
             else {
                 // button was just released
@@ -81,7 +86,7 @@ int main(void) {
 
         // rotate display 
         if (clicks == next_clicks) {
-            next_clicks += 4;
+            next_clicks += 10000;
             display >>= 1;
         }
     }
