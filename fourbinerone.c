@@ -51,7 +51,8 @@ ISR(TIM0_COMPA_vect) {
     }
     uint8_t c;
     for (c = 0; c < 4; c++) {
-        if ((display[c] & 0x0f) > display_count ) {
+        uint8_t frame_buffer = flags & FRAME_BUFFER ? 0xf0 : 0x0f;
+        if ((display[c] & frame_buffer) > display_count ) {
             PORTB |= (1<<c);
         }
         else {
@@ -117,7 +118,7 @@ int main(void) {
             }
         }
     }
-    
+
     return 0;
 }
 
