@@ -38,6 +38,40 @@ volatile uint8_t flags;
 // when it is 1, then the upper half is used
 #define FRAME_BUFFER 0b00000010
 
+
+//////////////////////////////////
+// frame buffer manipulation
+//////////////////////////////////
+void set_hidden_fb(uint8_t cell, uint8_t value) {
+    uint8_t visible_fb;
+    if (flags & FRAME_BUFFER) {
+         visible_fb = 0xf0;
+    }
+    else {
+         visible_fb = 0x0f;
+         // left shift value by four, for placing in the high bit frame buffer
+         value <<= 4;
+    }
+    display[cell] = (display[cell] & visible_fb) | value;
+}
+
+uint8_t get_visible_fb(uint8_t cell) {
+    uint8_t value = display[cell];
+    if (flags & FRAME_BUFFER) {
+         value &= 0xf0;
+         value >>= 4;
+    }
+    else {
+         value &= 0x0f;
+    }
+    return value;
+}
+
+void switch_fb() {
+    flags ^= FRAME_BUFFER;
+}
+
+
 // when the timer sends an interrupt, refresh the display
 // and read input
 ISR(TIM0_COMPA_vect) {
@@ -52,7 +86,7 @@ ISR(TIM0_COMPA_vect) {
     uint8_t c;
     for (c = 0; c < 4; c++) {
         uint8_t frame_buffer = flags & FRAME_BUFFER ? 0xf0 : 0x0f;
-        if ((display[c] & frame_buffer) > display_count ) {
+        if (get_visible_fb(c) > display_count ) {
             PORTB |= (1<<c);
         }
         else {
@@ -69,7 +103,6 @@ ISR(TIM0_COMPA_vect) {
 
     clicks++;
 }
-
 
 int main(void) {
     // PORTB is output for four output LEDs
@@ -90,20 +123,21 @@ int main(void) {
 
     sei(); // Enable global interrupts 
     
-    display[0] =  1;
-    display[1] =  3;
-    display[2] =  7;
-    display[3] = 15;
+    display[0] = 0xf1;
+    display[1] = 0x73;
+    display[2] = 0x37;
+    display[3] = 0x1f;
 
     while(1) {
         if ( flags & NEW_INPUT ) {
             flags &= ~NEW_INPUT;
             if ( input ) {
                 // button was just pressed
-                uint8_t c;
-                for (c=0; c<4; c++) {
-                    display[c] = rand() % 16;
-                }
+//                 uint8_t c;
+//                 for (c=0; c<4; c++) {
+//                     set_hidden_fb(c, rand() % 16);
+//                 }
+                switch_fb();
             }
             else {
                 // button was just released
