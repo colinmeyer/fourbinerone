@@ -29,8 +29,14 @@
 volatile uint8_t display[4]; // we'll only use the bottom four bits of each cell
                              // for sixteen shades of gray
 volatile uint8_t input;      // last read input
-volatile uint8_t new_input;  // flag set when new input is detected
 volatile uint16_t clicks;    // count interrupts fired for larger scale timing
+
+volatile uint8_t flags;      
+// when the first bit of flags is set, then new input has occured
+#define NEW_INPUT    0b00000001
+// when the second bit of flags is 0, then the lower half of the bytes in display[] is displayed
+// when it is 1, then the upper half is used
+#define FRAME_BUFFER 0b00000010
 
 // when the timer sends an interrupt, refresh the display
 // and read input
@@ -57,7 +63,7 @@ ISR(TIM0_COMPA_vect) {
     uint8_t test_input = PINB & (1<<PB4);
     if ( input != test_input ) {
         input = test_input;
-        new_input = 1;
+        flags |= NEW_INPUT;
     }
 
     clicks++;
@@ -89,8 +95,8 @@ int main(void) {
     display[3] = 15;
 
     while(1) {
-        if ( new_input ) {
-            new_input = 0;
+        if ( flags & NEW_INPUT ) {
+            flags &= ~NEW_INPUT;
             if ( input ) {
                 // button was just pressed
                 uint8_t c;
