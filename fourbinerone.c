@@ -112,12 +112,14 @@ int main(void) {
     // Set up Port B data to be all low
     PORTB = 0;
 
-    // set CTC mode - 11.9.1 P.73
+    // set CTC mode - 11.7.2 p.64
+    //    registers - 11.9.1 P.73
     TCCR0A = 1<<WGM01;
     // set the clock source and prescaling - 11.9.2 p.73
-    // ((9.6Mhz/8) / 8)*15 = .0001 = 1/10 ms
-    TCCR0B |= (1<<CS00);
+    // ((9.6Mhz/8) / 8) = 150Khz
+    TCCR0B |= (1<<CS01);
     // set the timer comparison register
+    // 15 timer clock cycles = .1ms
     OCR0A = 15;
 
     // enable timer comparison interrupt - 11.9.6 p.75
