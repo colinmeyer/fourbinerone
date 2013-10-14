@@ -134,23 +134,10 @@ int main(void) {
         if ( flags & NEW_INPUT ) {
             flags &= ~NEW_INPUT;
             if ( input ) {
-                // button was just pressed
-//                 uint8_t c;
-//                 for (c=0; c<4; c++) {
-//                     set_hidden_fb(c, rand() % 16);
-//                 }
                 switch_fb();
             }
             else {
                 // button was just released
-            }
-        }
-
-//         if ( !(clicks % 9) ) {
-        if ( 0 ) {
-            uint8_t c;
-            for (c=0; c<4; c++) {
-                display[c] = rand() % 16;
             }
         }
     }
