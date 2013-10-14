@@ -45,12 +45,12 @@ volatile uint8_t flags;
 void set_hidden_fb(uint8_t cell, uint8_t value) {
     uint8_t visible_fb;
     if (flags & FRAME_BUFFER) {
-         visible_fb = 0xf0;
+        visible_fb = 0xf0;
     }
     else {
-         visible_fb = 0x0f;
-         // left shift value by four, for placing in the high bit frame buffer
-         value <<= 4;
+        visible_fb = 0x0f;
+        // left shift value by four, for placing in the high bit frame buffer
+        value <<= 4;
     }
     display[cell] = (display[cell] & visible_fb) | value;
 }
