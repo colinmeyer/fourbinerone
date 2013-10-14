@@ -45,7 +45,9 @@ volatile uint8_t flags;
 void set_hidden_fb(uint8_t cell, uint8_t value) {
     uint8_t visible_fb;
     if (flags & FRAME_BUFFER) {
+        // setting lower half of byte; preserve upper (visible half)
         visible_fb = 0xf0;
+        value     &= 0x0f;
     }
     else {
         visible_fb = 0x0f;
