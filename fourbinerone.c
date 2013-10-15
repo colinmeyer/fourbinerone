@@ -127,20 +127,20 @@ int main(void) {
 
     sei(); // Enable global interrupts 
     
-    display[0] = 0xf1;
-    display[1] = 0x73;
-    display[2] = 0x37;
-    display[3] = 0x1f;
+    display[0] = 0x1;
+    display[1] = 0x3;
+    display[2] = 0x7;
+    display[3] = 0xf;
 
+    uint16_t next_click = 1000;
     while(1) {
-        if ( flags & NEW_INPUT ) {
-            flags &= ~NEW_INPUT;
-            if ( input ) {
-                switch_fb();
+        if ( clicks >= next_click ) {
+            next_click = clicks + 1000;
+            uint8_t c;
+            for (c=0;c<4;c++) {
+                set_hidden_fb(c, get_visible_fb((c+1)%4));
             }
-            else {
-                // button was just released
-            }
+            switch_fb();
         }
     }
 
