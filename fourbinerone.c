@@ -71,7 +71,9 @@ uint8_t get_visible_fb(uint8_t cell) {
 }
 
 void switch_fb() {
-    flags ^= FRAME_BUFFER;
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+        flags ^= FRAME_BUFFER;
+    }
 }
 
 
