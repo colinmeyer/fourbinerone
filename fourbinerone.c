@@ -8,6 +8,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 
 #define F_CPU 9.6E6L / 8 // CPU Freq. Must come before delay.h include. 9.6MHz / 8
 #include <util/delay.h>
@@ -135,7 +136,10 @@ int main(void) {
     uint16_t next_click = 1000;
     while(1) {
         if ( clicks >= next_click ) {
-            next_click = clicks + 1000;
+            ATOMIC_BLOCK(ATOMIC_FORCEON) {
+                next_click = clicks + 1000;
+            }
+
             uint8_t c;
             for (c=0;c<4;c++) {
                 set_hidden_fb(c, get_visible_fb((c+1)%4));
