@@ -35,6 +35,8 @@ volatile uint8_t flags;
 // when the second bit of flags is 0, then the lower half of the bytes in display[] is displayed
 // when it is 1, then the upper half is used
 #define FRAME_BUFFER 0b00000010
+// direction is >> when 0 or << when 1
+#define DIRECTION    0b00000100
 
 
 //////////////////////////////////
@@ -70,6 +72,18 @@ uint8_t get_visible_fb(uint8_t cell) {
 void switch_fb() {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         flags ^= FRAME_BUFFER;
+    }
+}
+
+void switch_off_input() {
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+        flags &= ~(NEW_INPUT); 
+    }
+}
+
+void switch_direction() {
+    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+        flags ^= DIRECTION;
     }
 }
 
@@ -133,11 +147,15 @@ int main(void) {
 
     uint16_t next_click = 1000;
     while(1) {
+        if (flags & NEW_INPUT && input) {
+            switch_off_input();
+            switch_direction();
+        }
 
         if ( clicks >= next_click ) {
             uint8_t c;
             for (c=0;c<4;c++) {
-                set_hidden_fb(c, get_visible_fb((c+1)%4));
+                set_hidden_fb( c, get_visible_fb((c + (flags & DIRECTION ? -1 : 1))&3) );
             }
             switch_fb();
 
