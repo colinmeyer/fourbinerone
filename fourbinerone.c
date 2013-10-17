@@ -10,9 +10,6 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
-#define F_CPU 9.6E6L / 8 // CPU Freq. Must come before delay.h include. 9.6MHz / 8
-#include <util/delay.h>
-
 // 4 output LEDs
 // PIN
 //   5 PB0  -->|--ww--GND
