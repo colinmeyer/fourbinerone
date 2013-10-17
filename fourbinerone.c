@@ -133,16 +133,18 @@ int main(void) {
 
     uint16_t next_click = 1000;
     while(1) {
-        if ( clicks >= next_click ) {
-            ATOMIC_BLOCK(ATOMIC_FORCEON) {
-                next_click = clicks + 1000;
-            }
 
+        if ( clicks >= next_click ) {
             uint8_t c;
             for (c=0;c<4;c++) {
                 set_hidden_fb(c, get_visible_fb((c+1)%4));
             }
             switch_fb();
+
+            ATOMIC_BLOCK(ATOMIC_FORCEON) {
+                next_click = clicks + 750;
+            }
+
         }
     }
 
