@@ -24,8 +24,13 @@
 // 
 
 
-volatile uint8_t display[4]; // we'll only use the bottom four bits of each cell
-                             // for sixteen shades of gray
+#define NEXT_CLICKS 750
+
+volatile uint8_t display[4]; // we'll only use four bits of each cell
+                             // for sixteen shades of gray -- at a time
+                             // if flags & FRAME_BUFFER, then we'll use the top four
+                             // else the bottom
+
 volatile uint8_t input;      // last read input
 volatile uint16_t clicks;    // count interrupts fired for larger scale timing
 
@@ -37,6 +42,8 @@ volatile uint8_t flags;
 #define FRAME_BUFFER 0b00000010
 // direction is >> when 0 or << when 1
 #define DIRECTION    0b00000100
+// flag set when clicks time is noticed
+#define CLICKS_TIME  0b00001000
 
 
 //////////////////////////////////
@@ -85,6 +92,15 @@ void switch_direction() {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         flags ^= DIRECTION;
     }
+}
+
+// this doesn't need to be atomic
+void set_clicks_time() {
+        flags |= CLICKS_TIME;
+}
+
+void clear_clicks_time() {
+        flags &= ~(CLICKS_TIME);
 }
 
 
@@ -152,17 +168,20 @@ int main(void) {
             switch_direction();
         }
 
-        if ( clicks >= next_click ) {
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            if ( clicks >= next_click ) {
+                next_click = clicks + NEXT_CLICKS;
+                set_clicks_time();
+            }
+        }
+
+        if (flags & CLICKS_TIME) {
+            clear_clicks_time();
             uint8_t c;
             for (c=0;c<4;c++) {
                 set_hidden_fb( c, get_visible_fb((c + (flags & DIRECTION ? -1 : 1))&3) );
             }
             switch_fb();
-
-            ATOMIC_BLOCK(ATOMIC_FORCEON) {
-                next_click = clicks + 750;
-            }
-
         }
     }
 
