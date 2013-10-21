@@ -32,7 +32,7 @@ volatile uint8_t display[4]; // we'll only use four bits of each cell
                              // else the bottom
 
 volatile uint8_t input;      // last read input
-volatile uint16_t clicks;    // count interrupts fired for larger scale timing
+volatile uint16_t _clicks;    // count interrupts fired for larger scale timing
 
 volatile uint8_t flags;      
 // when the first bit of flags is set, then new input has occured
@@ -94,15 +94,6 @@ void switch_direction() {
     }
 }
 
-// this doesn't need to be atomic
-void set_clicks_time() {
-        flags |= CLICKS_TIME;
-}
-
-void clear_clicks_time() {
-        flags &= ~(CLICKS_TIME);
-}
-
 
 // when the timer sends an interrupt, refresh the display
 // and read input
@@ -132,7 +123,16 @@ ISR(TIM0_COMPA_vect) {
         flags |= NEW_INPUT;
     }
 
-    clicks++;
+    _clicks++;
+}
+
+// safe access to clicks counter
+uint16_t read_clicks() {
+    uint16_t clicks;
+    ATOMIC_BLOCK(ATOMIC_FORCEON){
+        clicks = _clicks;
+    }
+    return clicks;
 }
 
 int main(void) {
@@ -168,15 +168,10 @@ int main(void) {
             switch_direction();
         }
 
-        ATOMIC_BLOCK(ATOMIC_FORCEON) {
-            if ( clicks >= next_click ) {
-                next_click = clicks + NEXT_CLICKS;
-                set_clicks_time();
-            }
-        }
+        uint16_t clicks = read_clicks();
+        if ( clicks >= next_click ) {
+            next_click = clicks + NEXT_CLICKS;
 
-        if (flags & CLICKS_TIME) {
-            clear_clicks_time();
             uint8_t c;
             for (c=0;c<4;c++) {
                 set_hidden_fb( c, get_visible_fb((c + (flags & DIRECTION ? -1 : 1))&3) );
