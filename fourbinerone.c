@@ -26,7 +26,7 @@
 
 #define NEXT_CLICKS 750
 
-volatile uint8_t display[4]; // we'll only use four bits of each cell
+volatile uint8_t display[8]; // we'll only use four bits of each cell
                              // for sixteen shades of gray -- at a time
                              // if flags & FRAME_BUFFER, then we'll use the top four
                              // else the bottom
@@ -50,30 +50,16 @@ volatile uint8_t flags;
 // frame buffer manipulation
 //////////////////////////////////
 void set_hidden_fb(uint8_t cell, uint8_t value) {
-    uint8_t visible_fb;
-    if (flags & FRAME_BUFFER) {
-        // setting lower half of byte; preserve upper (visible half)
-        visible_fb = 0xf0;
-        value     &= 0x0f;
-    }
-    else {
-        visible_fb = 0x0f;
-        // left shift value by four, for placing in the high bit frame buffer
-        value <<= 4;
-    }
-    display[cell] = (display[cell] & visible_fb) | value;
+    if (! (flags & FRAME_BUFFER))
+        cell += 4;
+    display[cell] = value & 0x0f;
 }
 
 uint8_t get_visible_fb(uint8_t cell) {
-    uint8_t value = display[cell];
-    if (flags & FRAME_BUFFER) {
-         value &= 0xf0;
-         value >>= 4;
-    }
-    else {
-         value &= 0x0f;
-    }
-    return value;
+    if ( flags & FRAME_BUFFER )
+        cell += 4;
+
+    return display[cell];
 }
 
 void switch_fb() {
