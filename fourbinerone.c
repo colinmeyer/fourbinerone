@@ -101,11 +101,9 @@ ISR(TIM0_COMPA_vect) {
     static uint8_t display_count;
 
     // homemade pwm
-    display_count++;
-    // display_count = display_count % 8
-    if ( display_count & 0xf0 ) {
-        display_count = 0;
-    }
+
+    // loop from 0x0 to 0xf repeatedly
+    display_count = (display_count + 1) & 0x0f;
     uint8_t c;
     for (c = 0; c < 4; c++) {
         if (get_visible_fb(c) > display_count ) {
