@@ -24,7 +24,7 @@
 // 
 
 
-#define NEXT_CLICKS 750
+#define NEXT_CLICKS_COUNT 400
 
 volatile uint8_t display[4]; // we'll only use four bits of each cell
                              // for sixteen shades of gray -- at a time
@@ -67,7 +67,6 @@ void set_hidden_fb(uint8_t cell, uint8_t value) {
 uint8_t get_visible_fb(uint8_t cell) {
     uint8_t value = display[cell];
     if (flags & FRAME_BUFFER) {
-         value &= 0xf0;
          value >>= 4;
     }
     else {
@@ -88,11 +87,6 @@ void switch_off_input() {
     }
 }
 
-void switch_direction() {
-    ATOMIC_BLOCK(ATOMIC_FORCEON) {
-        flags ^= DIRECTION;
-    }
-}
 
 
 // when the timer sends an interrupt, refresh the display
@@ -136,8 +130,6 @@ uint16_t read_clicks() {
 int main(void) {
     // PORTB is output for four output LEDs
     DDRB = (1<<DDB0)|(1<<DDB1)|(1<<DDB2)|(1<<DDB3);
-    // Set up Port B data to be all low
-    PORTB = 0;
 
     // set CTC mode - 11.7.2 p.64
     //    registers - 11.9.1 P.73
@@ -163,7 +155,7 @@ int main(void) {
     while(1) {
         if (flags & NEW_INPUT && input) {
             switch_off_input();
-            switch_direction();
+            flags ^= DIRECTION;
         }
 
         uint16_t clicks = read_clicks();
