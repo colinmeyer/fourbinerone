@@ -42,9 +42,8 @@ volatile uint8_t flags;
 #define FRAME_BUFFER 0b00000010
 // direction is >> when 0 or << when 1
 #define DIRECTION    0b00000100
-// flag set when clicks time is noticed
-#define CLICKS_TIME  0b00001000
-
+// flag set when it's time to animate
+#define NEXT_ANIM    0b00001000
 
 //////////////////////////////////
 // frame buffer manipulation
@@ -87,6 +86,19 @@ void switch_off_input() {
     }
 }
 
+void set_next_anim() {
+    flags |= NEXT_ANIM;
+}
+
+uint8_t read_clear_next_anim() {
+    uint8_t is_set = flags & NEXT_ANIM;
+
+    if (is_set) {
+        flags &= ~(NEXT_ANIM);
+    }
+
+    return is_set;
+}
 
 
 // when the timer sends an interrupt, refresh the display
@@ -116,15 +128,14 @@ ISR(TIM0_COMPA_vect) {
     }
 
     _clicks++;
-}
+    // make the integer rollover happen on a boundary that is divisible by lots
+    // of shit
+    if (_clicks == 60000)
+        _clicks = 0;
 
-// safe access to clicks counter
-uint16_t read_clicks() {
-    uint16_t clicks;
-    ATOMIC_BLOCK(ATOMIC_FORCEON){
-        clicks = _clicks;
-    }
-    return clicks;
+    // check to see if it's time to animate
+    if ( _clicks % NEXT_CLICKS_COUNT == 0 )
+        set_next_anim();
 }
 
 int main(void) {
@@ -151,17 +162,13 @@ int main(void) {
     display[2] = 0x7;
     display[3] = 0xf;
 
-    uint16_t next_click = 1000;
     while(1) {
         if (flags & NEW_INPUT && input) {
             switch_off_input();
             flags ^= DIRECTION;
         }
 
-        uint16_t clicks = read_clicks();
-        if ( clicks >= next_click ) {
-            next_click = clicks + NEXT_CLICKS;
-
+        if ( read_clear_next_anim() ) {
             uint8_t c;
             for (c=0;c<4;c++) {
                 set_hidden_fb( c, get_visible_fb((c + (flags & DIRECTION ? -1 : 1))&3) );
