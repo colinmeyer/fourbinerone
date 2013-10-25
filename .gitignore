@@ -16,3 +16,15 @@
 *.exe
 *.out
 *.app
+
+# vim temp files
+.*.swp
+
+# avr-gcc artifacts
+*.bin
+*.elf
+*.hex
+*.lst
+*.map
+*.srec
+
