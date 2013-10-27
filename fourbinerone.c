@@ -90,7 +90,9 @@ uint8_t read_clear_next_anim() {
     uint8_t is_set = flags & NEXT_ANIM;
 
     if (is_set) {
-        flags &= ~(NEXT_ANIM);
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            flags &= ~(NEXT_ANIM);
+        }
     }
 
     return is_set;
