@@ -86,10 +86,6 @@ void switch_off_input() {
     }
 }
 
-void set_next_anim() {
-    flags |= NEXT_ANIM;
-}
-
 uint8_t read_clear_next_anim() {
     uint8_t is_set = flags & NEXT_ANIM;
 
@@ -135,7 +131,7 @@ ISR(TIM0_COMPA_vect) {
 
     // check to see if it's time to animate
     if ( _clicks % NEXT_CLICKS_COUNT == 0 )
-        set_next_anim();
+        flags |= NEXT_ANIM;
 }
 
 int main(void) {
