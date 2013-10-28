@@ -157,7 +157,7 @@ void decay_display() {
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
 typedef funcptr (*ptrfuncptr)();
 
-funcptr setup(), listen_for_button(), missile();
+funcptr setup(), listen_for_button(), missile(), reverse_missile();
 
 int main(void) {
     //----------------------------------------------------
@@ -220,9 +220,9 @@ funcptr listen_for_button() {
     }
 }
 
-funcptr missile() {
-    static uint8_t curr;
+static uint8_t curr;
 
+funcptr missile() {
     if (read_clear_flag(NEXT_ANIM)) {
         // display the next lighted spot
         for (uint8_t c=0; c<4; c++) {
@@ -234,8 +234,25 @@ funcptr missile() {
         curr = (curr + 1) & 0x3;
 
         if ( curr == 0 )
-            return (funcptr) listen_for_button;
+            return (funcptr) reverse_missile;
     }
 
     return (funcptr) missile;
+}
+
+funcptr reverse_missile() {
+    if (read_clear_flag(NEXT_ANIM)) {
+        curr = (curr - 1) & 0x3;
+
+        // display the next lighted spot
+        for (uint8_t c=0; c<4; c++) {
+            set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
+        }
+        switch_fb();
+
+        if ( curr == 0 ) 
+            return (funcptr) missile;
+    }
+
+    return (funcptr) reverse_missile;
 }
