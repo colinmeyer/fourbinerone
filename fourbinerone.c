@@ -24,10 +24,11 @@
 // 
 
 
-#define NEXT_DECAY_COUNT 300
+#define NEXT_DECAY_COUNT  50
+#define NEXT_ANIM_COUNT  100
 
-volatile uint8_t display[4]; // we'll only use four bits of each cell
-                             // for sixteen shades of gray -- at a time
+volatile uint8_t display[4]; // we'll use four bits for each cell
+                             // for sixteen shades of gray
                              // if flags & FRAME_BUFFER, then we'll use the top four
                              // else the bottom
 
@@ -156,7 +157,7 @@ void decay_display() {
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
 typedef funcptr (*ptrfuncptr)();
 
-funcptr setup(), wait();
+funcptr setup(), listen_for_button(), missile();
 
 int main(void) {
     //----------------------------------------------------
@@ -204,9 +205,37 @@ funcptr setup() {
     }
     switch_fb();
 
-    return (funcptr) wait;
+    return (funcptr) listen_for_button;
 }
 
-funcptr wait() {
-    return (funcptr) wait;
+funcptr listen_for_button() {
+    if ( (flags & NEW_INPUT) && input ) {
+        switch_off_input();
+        // button press, start missile
+
+        return (funcptr) missile;
+    }
+    else {
+        return (funcptr) listen_for_button;
+    }
+}
+
+funcptr missile() {
+    static uint8_t curr;
+
+    if (read_clear_flag(NEXT_ANIM)) {
+        // display the next lighted spot
+        for (uint8_t c=0; c<4; c++) {
+            set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
+        }
+        switch_fb();
+
+        // increment the counter, 0-3
+        curr = (curr + 1) & 0x3;
+
+        if ( curr == 0 )
+            return (funcptr) listen_for_button;
+    }
+
+    return (funcptr) missile;
 }
