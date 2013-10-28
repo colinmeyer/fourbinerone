@@ -35,15 +35,19 @@ volatile uint8_t input;      // last read input
 volatile uint16_t _clicks;    // count interrupts fired for larger scale timing
 
 volatile uint8_t flags;      
-// when the first bit of flags is set, then new input has occured
-#define NEW_INPUT    0b00000001
-// when the second bit of flags is 0, then the lower half of the bytes in display[] is displayed
-// when it is 1, then the upper half is used
-#define FRAME_BUFFER 0b00000010
-// direction is >> when 0 or << when 1
-#define DIRECTION    0b00000100
-// flag set when it's time to decay
-#define NEXT_DECAY   0b00001000
+
+enum FLAGS {
+    // when the first bit of flags is set, then new input has occured
+    NEW_INPUT    = 0b00000001,
+    // when the second bit of flags is 0, then the lower half of the bytes in
+    // display[] is displayed when it is 1, then the upper half is used
+    FRAME_BUFFER = 0b00000010,
+    // direction is >> when 0 or << when 1
+    DIRECTION    = 0b00000100,
+    // flag set when it's time to decay
+    NEXT_DECAY   = 0b00001000,
+    NEXT_ANIM    = 0b00010000
+};
 
 //////////////////////////////////
 // frame buffer manipulation
@@ -86,12 +90,12 @@ void switch_off_input() {
     }
 }
 
-uint8_t read_clear_next_decay() {
-    uint8_t is_set = flags & NEXT_DECAY;
+uint8_t read_clear_flag(uint8_t FLAG) {
+    uint8_t is_set = flags & FLAG;
 
     if (is_set) {
         ATOMIC_BLOCK(ATOMIC_FORCEON) {
-            flags &= ~(NEXT_DECAY);
+            flags &= ~(FLAG);
         }
     }
 
@@ -131,9 +135,11 @@ ISR(TIM0_COMPA_vect) {
     if (_clicks == 60000)
         _clicks = 0;
 
-    // check to see if it's time to decay
+    // set app level timer flags, as appropriate
     if ( _clicks % NEXT_DECAY_COUNT == 0 )
         flags |= NEXT_DECAY;
+    if ( _clicks % NEXT_ANIM_COUNT  == 0 )
+        flags |= NEXT_ANIM;
 }
 
 
@@ -183,7 +189,7 @@ int main(void) {
     while(1) {
         state = (ptrfuncptr)(*state)();
 
-        if (read_clear_next_decay()) {
+        if (read_clear_flag(NEXT_DECAY)) {
             decay_display();
         }
     }
