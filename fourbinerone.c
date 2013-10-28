@@ -24,7 +24,7 @@
 // 
 
 
-#define NEXT_CLICKS_COUNT 400
+#define NEXT_DECAY_COUNT 300
 
 volatile uint8_t display[4]; // we'll only use four bits of each cell
                              // for sixteen shades of gray -- at a time
@@ -42,8 +42,8 @@ volatile uint8_t flags;
 #define FRAME_BUFFER 0b00000010
 // direction is >> when 0 or << when 1
 #define DIRECTION    0b00000100
-// flag set when it's time to animate
-#define NEXT_ANIM    0b00001000
+// flag set when it's time to decay
+#define NEXT_DECAY   0b00001000
 
 //////////////////////////////////
 // frame buffer manipulation
@@ -86,12 +86,12 @@ void switch_off_input() {
     }
 }
 
-uint8_t read_clear_next_anim() {
-    uint8_t is_set = flags & NEXT_ANIM;
+uint8_t read_clear_next_decay() {
+    uint8_t is_set = flags & NEXT_DECAY;
 
     if (is_set) {
         ATOMIC_BLOCK(ATOMIC_FORCEON) {
-            flags &= ~(NEXT_ANIM);
+            flags &= ~(NEXT_DECAY);
         }
     }
 
@@ -131,12 +131,31 @@ ISR(TIM0_COMPA_vect) {
     if (_clicks == 60000)
         _clicks = 0;
 
-    // check to see if it's time to animate
-    if ( _clicks % NEXT_CLICKS_COUNT == 0 )
-        flags |= NEXT_ANIM;
+    // check to see if it's time to decay
+    if ( _clicks % NEXT_DECAY_COUNT == 0 )
+        flags |= NEXT_DECAY;
 }
 
+
+void decay_display() {
+    for (uint8_t c=0; c<4; c++) {
+        set_hidden_fb(
+            c,
+            get_visible_fb(c) / 2
+        );
+    }
+    switch_fb();
+}
+
+typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
+typedef funcptr (*ptrfuncptr)();
+
+funcptr setup(), wait();
+
 int main(void) {
+    //----------------------------------------------------
+    // chip setup
+
     // PORTB is output for four output LEDs
     DDRB = (1<<DDB0)|(1<<DDB1)|(1<<DDB2)|(1<<DDB3);
 
@@ -154,27 +173,34 @@ int main(void) {
     TIMSK0 = 1<<OCIE0A;
 
     sei(); // Enable global interrupts 
+
+    // 
+    //----------------------------------------------------
     
-    display[0] = 0x1;
-    display[1] = 0x3;
-    display[2] = 0x7;
-    display[3] = 0xf;
+    // state machine with visual decay
+    ptrfuncptr state = setup;
 
     while(1) {
-        if (flags & NEW_INPUT && input) {
-            switch_off_input();
-            flags ^= DIRECTION;
-        }
+        state = (ptrfuncptr)(*state)();
 
-        if ( read_clear_next_anim() ) {
-            uint8_t c;
-            for (c=0;c<4;c++) {
-                set_hidden_fb( c, get_visible_fb((c + (flags & DIRECTION ? -1 : 1))&3) );
-            }
-            switch_fb();
+        if (read_clear_next_decay()) {
+            decay_display();
         }
     }
 
     return 0;
 }
 
+
+funcptr setup() {
+    for (uint8_t c=0; c<4; c++) {
+       set_hidden_fb(c, (1<<(c+1)) - 1);
+    }
+    switch_fb();
+
+    return (funcptr) wait;
+}
+
+funcptr wait() {
+    return (funcptr) wait;
+}
