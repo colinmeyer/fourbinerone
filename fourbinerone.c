@@ -251,6 +251,8 @@ funcptr missile() {
         }
     }
 
-    return (funcptr) missile;
+    if (input && read_clear_flag(NEW_INPUT)) return (funcptr) listen_for_button;
+    else
+        return (funcptr) missile;
 }
 
