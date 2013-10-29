@@ -24,8 +24,11 @@
 // 
 
 
-#define NEXT_DECAY_COUNT  50
-#define NEXT_ANIM_COUNT  100
+#define NEXT_DECAY_COUNT  200
+// #define NEXT_ANIM_COUNT  3000
+// #define NEXT_ANIM_COUNT  2000
+#define NEXT_ANIM_COUNT  1200
+// #define NEXT_ANIM_COUNT   800
 
 volatile uint8_t display[5]; // we'll use four bits for each cell
                              // for sixteen shades of gray
@@ -36,7 +39,7 @@ volatile uint8_t display[5]; // we'll use four bits for each cell
                              // any light with a true bit is not decayed
 
 volatile uint8_t input;      // last read input
-volatile uint16_t _clicks;    // count interrupts fired for larger scale timing
+volatile uint16_t _clicks;   // count interrupts fired for larger scale timing
 
 volatile uint8_t flags;      
 
@@ -165,8 +168,12 @@ typedef funcptr (*ptrfuncptr)();
 funcptr setup(), listen_for_button(), missile(), reverse_missile();
 
 int main(void) {
-    //----------------------------------------------------
+    //====================================================
     // chip setup
+
+    // change system clock prescaler
+    CLKPR = (1<<CLKPCE); // enable change - 6.4.1 p.28
+    CLKPR = 0x0;         // no prescaler (default is 8)
 
     // PORTB is output for four output LEDs
     DDRB = (1<<DDB0)|(1<<DDB1)|(1<<DDB2)|(1<<DDB3);
@@ -175,11 +182,11 @@ int main(void) {
     //    registers - 11.9.1 P.73
     TCCR0A = 1<<WGM01;
     // set the clock source and prescaling - 11.9.2 p.73
-    // ((9.6Mhz/8) / 8) = 150Khz
+    // ((9.6Mhz) / 8) = 1.2Mhz
     TCCR0B |= (1<<CS01);
     // set the timer comparison register
-    // 15 timer clock cycles = .1ms
-    OCR0A = 15;
+    // 60 timer cycles = .1ms
+    OCR0A = 60;
 
     // enable timer comparison interrupt - 11.9.6 p.75
     TIMSK0 = 1<<OCIE0A;
@@ -187,7 +194,7 @@ int main(void) {
     sei(); // Enable global interrupts 
 
     // 
-    //----------------------------------------------------
+    //====================================================
     
     // state machine with visual decay
     ptrfuncptr state = setup;
