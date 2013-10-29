@@ -46,7 +46,7 @@ enum FLAGS {
     // when the second bit of flags is 0, then the lower half of the bytes in
     // display[] is displayed when it is 1, then the upper half is used
     FRAME_BUFFER = 0b00000010,
-    // direction is >> when 0 or << when 1
+    // direction is ++ when 0, -- when 1
     DIRECTION    = 0b00000100,
     // flag set when it's time to decay
     NEXT_DECAY   = 0b00001000,
@@ -82,9 +82,9 @@ uint8_t get_visible_fb(uint8_t cell) {
     return value;
 }
 
-void switch_fb() {
+void twiddle_flag(uint8_t FLAG) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
-        flags ^= FRAME_BUFFER;
+        flags ^= FLAG;
     }
 }
 
@@ -156,7 +156,7 @@ void decay_display() {
         else
             set_hidden_fb( c, get_visible_fb(c) / 2 );
     }
-    switch_fb();
+    twiddle_flag(FRAME_BUFFER);
 }
 
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
@@ -208,7 +208,7 @@ funcptr setup() {
     for (uint8_t c=0; c<4; c++) {
        set_hidden_fb(c, (1<<(c+1)) - 1);
     }
-    switch_fb();
+    twiddle_flag(FRAME_BUFFER);
 
     return (funcptr) listen_for_button;
 }
@@ -233,31 +233,24 @@ funcptr missile() {
         for (uint8_t c=0; c<4; c++) {
             set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
         }
-        switch_fb();
+        // mask the "missile head" from decay
+        set_hidden_fb(4, (1<<curr));
+        twiddle_flag(FRAME_BUFFER);
 
-        // increment the counter, 0-3
-        curr = (curr + 1) & 0x3;
-
-        if ( curr == 0 )
-            return (funcptr) reverse_missile;
+        if ( flags & DIRECTION ) {
+            if (curr == 0)
+                twiddle_flag(DIRECTION);
+            else
+                curr--;
+        }
+        else {
+            if (curr == 3)
+                twiddle_flag(DIRECTION);
+            else
+                curr++;
+        }
     }
 
     return (funcptr) missile;
 }
 
-funcptr reverse_missile() {
-    if (read_clear_flag(NEXT_ANIM)) {
-        curr = (curr - 1) & 0x3;
-
-        // display the next lighted spot
-        for (uint8_t c=0; c<4; c++) {
-            set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
-        }
-        switch_fb();
-
-        if ( curr == 0 ) 
-            return (funcptr) missile;
-    }
-
-    return (funcptr) reverse_missile;
-}
