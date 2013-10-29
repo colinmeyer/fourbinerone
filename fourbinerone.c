@@ -27,10 +27,13 @@
 #define NEXT_DECAY_COUNT  50
 #define NEXT_ANIM_COUNT  100
 
-volatile uint8_t display[4]; // we'll use four bits for each cell
+volatile uint8_t display[5]; // we'll use four bits for each cell
                              // for sixteen shades of gray
                              // if flags & FRAME_BUFFER, then we'll use the top four
                              // else the bottom
+                             // 
+                             // the fifth element is a decay mask; 
+                             // any light with a true bit is not decayed
 
 volatile uint8_t input;      // last read input
 volatile uint16_t _clicks;    // count interrupts fired for larger scale timing
@@ -145,11 +148,13 @@ ISR(TIM0_COMPA_vect) {
 
 
 void decay_display() {
+    uint8_t mask = get_visible_fb(4);
+
     for (uint8_t c=0; c<4; c++) {
-        set_hidden_fb(
-            c,
-            get_visible_fb(c) / 2
-        );
+        if ( mask & (1<<c) )
+            set_hidden_fb( c, get_visible_fb(c) );
+        else
+            set_hidden_fb( c, get_visible_fb(c) / 2 );
     }
     switch_fb();
 }
