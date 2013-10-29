@@ -154,10 +154,11 @@ void decay_display() {
     uint8_t mask = get_visible_fb(4);
 
     for (uint8_t c=0; c<4; c++) {
+        uint8_t vis = get_visible_fb(c);
         if ( mask & (1<<c) )
-            set_hidden_fb( c, get_visible_fb(c) );
+            set_hidden_fb(c, vis);
         else
-            set_hidden_fb( c, get_visible_fb(c) / 2 );
+            set_hidden_fb(c, vis > 2 ? vis - 2 : 0);
     }
     twiddle_flag(FRAME_BUFFER);
 }
