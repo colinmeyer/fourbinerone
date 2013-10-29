@@ -158,7 +158,7 @@ void decay_display() {
         if ( mask & (1<<c) )
             set_hidden_fb(c, vis);
         else
-            set_hidden_fb(c, vis > 2 ? vis - 2 : 0);
+            set_hidden_fb(c, vis > 3 ? vis - 3 : 0);
     }
     twiddle_flag(FRAME_BUFFER);
 }
