@@ -168,6 +168,12 @@ typedef funcptr (*ptrfuncptr)();
 
 funcptr setup(), listen_for_button(), missile(), reverse_missile();
 
+uint8_t lfsr_next() {
+    static uint8_t lfsr = (uint8_t)0xcb;
+    lfsr = (lfsr >> 1) ^ (-(uint8_t)(lfsr & 1) & 0x38);    
+    return lfsr;
+}
+
 int main(void) {
     //====================================================
     // chip setup
