@@ -24,11 +24,8 @@
 // 
 
 
-#define NEXT_DECAY_COUNT  200
-// #define NEXT_ANIM_COUNT  3000
-// #define NEXT_ANIM_COUNT  2000
-#define NEXT_ANIM_COUNT  1200
-// #define NEXT_ANIM_COUNT   800
+#define NEXT_DECAY_COUNT  800
+#define NEXT_ANIM_COUNT  2500
 
 volatile uint8_t display[5]; // we'll use four bits for each cell
                              // for sixteen shades of gray
@@ -166,7 +163,7 @@ void decay_display() {
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
 typedef funcptr (*ptrfuncptr)();
 
-funcptr setup(), listen_for_button(), missile(), reverse_missile();
+funcptr setup(), set_random_lights();
 
 uint8_t lfsr_next() {
     static uint8_t lfsr = (uint8_t)0xcb;
@@ -193,7 +190,7 @@ int main(void) {
     TCCR0B |= (1<<CS01);
     // set the timer comparison register
     // 60 timer cycles = .1ms
-    OCR0A = 60;
+    OCR0A = 120;
 
     // enable timer comparison interrupt - 11.9.6 p.75
     TIMSK0 = 1<<OCIE0A;
@@ -210,7 +207,7 @@ int main(void) {
         state = (ptrfuncptr)(*state)();
 
         if (read_clear_flag(NEXT_DECAY)) {
-            decay_display();
+             decay_display();
         }
     }
 
@@ -219,54 +216,19 @@ int main(void) {
 
 
 funcptr setup() {
-    for (uint8_t c=0; c<4; c++) {
-       set_hidden_fb(c, (1<<(c+1)) - 1);
-    }
-    twiddle_flag(FRAME_BUFFER);
-
-    return (funcptr) listen_for_button;
+    return (funcptr) set_random_lights;
 }
 
-funcptr listen_for_button() {
-    if ( (flags & NEW_INPUT) && input ) {
-        switch_off_input();
-        // button press, start missile
-
-        return (funcptr) missile;
-    }
-    else {
-        return (funcptr) listen_for_button;
-    }
-}
-
-static uint8_t curr;
-
-funcptr missile() {
+funcptr set_random_lights() {
     if (read_clear_flag(NEXT_ANIM)) {
-        // display the next lighted spot
+        uint8_t lfsr = lfsr_next();
         for (uint8_t c=0; c<4; c++) {
-            set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
+            set_hidden_fb(c, lfsr_next() & 0xf);
+// just display one random nybble
+//             set_hidden_fb(c, lfsr & (1<<c) ? 0xa : 0);
         }
-        // mask the "missile head" from decay
-        set_hidden_fb(4, (1<<curr));
         twiddle_flag(FRAME_BUFFER);
-
-        if ( flags & DIRECTION ) {
-            if (curr == 0)
-                twiddle_flag(DIRECTION);
-            else
-                curr--;
-        }
-        else {
-            if (curr == 3)
-                twiddle_flag(DIRECTION);
-            else
-                curr++;
-        }
     }
 
-    if (input && read_clear_flag(NEW_INPUT)) return (funcptr) listen_for_button;
-    else
-        return (funcptr) missile;
+    return (funcptr) set_random_lights;
 }
-
