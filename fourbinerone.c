@@ -221,11 +221,9 @@ funcptr setup() {
 
 funcptr set_random_lights() {
     if (read_clear_flag(NEXT_ANIM)) {
-        uint8_t lfsr = lfsr_next();
         for (uint8_t c=0; c<4; c++) {
-            set_hidden_fb(c, lfsr_next() & 0xf);
-// just display one random nybble
-//             set_hidden_fb(c, lfsr & (1<<c) ? 0xa : 0);
+            uint8_t curr = get_visible_fb(c);
+            set_hidden_fb(c, curr == 0 ? (lfsr_next() & 0xf) : curr);
         }
         twiddle_flag(FRAME_BUFFER);
     }
