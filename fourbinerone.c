@@ -24,8 +24,8 @@
 // 
 
 
-#define NEXT_DECAY_COUNT  800
-#define NEXT_ANIM_COUNT  2500
+#define NEXT_DECAY_COUNT  600
+#define NEXT_ANIM_COUNT  1200
 
 volatile uint8_t display[5]; // we'll use four bits for each cell
                              // for sixteen shades of gray
@@ -155,7 +155,7 @@ void decay_display() {
         if ( mask & (1<<c) )
             set_hidden_fb(c, vis);
         else
-            set_hidden_fb(c, vis > 3 ? vis - 3 : 0);
+            set_hidden_fb(c, vis > 1 ? vis - 1 : 0);
     }
     twiddle_flag(FRAME_BUFFER);
 }
