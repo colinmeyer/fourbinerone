@@ -167,7 +167,7 @@ funcptr setup(), set_random_lights();
 
 uint8_t lfsr_next() {
     static uint8_t lfsr = (uint8_t)0xcb;
-    lfsr = (lfsr >> 1) ^ (-(uint8_t)(lfsr & 1) & 0x38);    
+    lfsr = (lfsr >> 1) ^ (-(uint8_t)(lfsr & 1) & 0b10111000);    
     return lfsr;
 }
 
