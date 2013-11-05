@@ -10,13 +10,11 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
-// 4 output LEDs
+// 3 output LEDs (one RGB, common cathode)
 // PIN
-//   5 PB0  -->|--ww--GND
-//   6 PB1  -->|--ww--GND
-//   7 PB2  -->|--ww--GND
-//   2 PB3  -->|--ww--GND
-//
+//   5 PB0 R -ww-->|---\
+//   6 PB1 B -ww-->|------GND
+//   7 PB2 G -ww-->|---/
 //
 // 1 input
 // PIN
@@ -24,19 +22,12 @@
 // 
 
 
-#define NEXT_DECAY_COUNT  200
-// #define NEXT_ANIM_COUNT  3000
-// #define NEXT_ANIM_COUNT  2000
-#define NEXT_ANIM_COUNT  1200
-// #define NEXT_ANIM_COUNT   800
+#define NEXT_ANIM_COUNT  12000
 
-volatile uint8_t display[5]; // we'll use four bits for each cell
+volatile uint8_t display[4]; // we'll use four bits for each cell
                              // for sixteen shades of gray
                              // if flags & FRAME_BUFFER, then we'll use the top four
                              // else the bottom
-                             // 
-                             // the fifth element is a decay mask; 
-                             // any light with a true bit is not decayed
 
 volatile uint8_t input;      // last read input
 volatile uint16_t _clicks;   // count interrupts fired for larger scale timing
@@ -51,8 +42,7 @@ enum FLAGS {
     FRAME_BUFFER = 0b00000010,
     // direction is ++ when 0, -- when 1
     DIRECTION    = 0b00000100,
-    // flag set when it's time to decay
-    NEXT_DECAY   = 0b00001000,
+    // flag set when it's time to animate
     NEXT_ANIM    = 0b00010000
 };
 
@@ -143,30 +133,15 @@ ISR(TIM0_COMPA_vect) {
         _clicks = 0;
 
     // set app level timer flags, as appropriate
-    if ( _clicks % NEXT_DECAY_COUNT == 0 )
-        flags |= NEXT_DECAY;
     if ( _clicks % NEXT_ANIM_COUNT  == 0 )
         flags |= NEXT_ANIM;
 }
 
 
-void decay_display() {
-    uint8_t mask = get_visible_fb(4);
-
-    for (uint8_t c=0; c<4; c++) {
-        uint8_t vis = get_visible_fb(c);
-        if ( mask & (1<<c) )
-            set_hidden_fb(c, vis);
-        else
-            set_hidden_fb(c, vis > 3 ? vis - 3 : 0);
-    }
-    twiddle_flag(FRAME_BUFFER);
-}
-
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
 typedef funcptr (*ptrfuncptr)();
 
-funcptr setup(), listen_for_button(), missile(), reverse_missile();
+funcptr setup(), print_random_color();
 
 int main(void) {
     //====================================================
@@ -197,20 +172,20 @@ int main(void) {
     // 
     //====================================================
     
-    // state machine with visual decay
     ptrfuncptr state = setup;
 
     while(1) {
         state = (ptrfuncptr)(*state)();
-
-        if (read_clear_flag(NEXT_DECAY)) {
-            decay_display();
-        }
     }
 
     return 0;
 }
 
+uint8_t lfsr_next() {
+    static uint8_t lfsr = (uint8_t)0xcb;
+    lfsr = (lfsr >> 1) ^ (-(uint8_t)(lfsr & 1) & 0b10111000);
+    return lfsr;
+}
 
 funcptr setup() {
     for (uint8_t c=0; c<4; c++) {
@@ -218,49 +193,19 @@ funcptr setup() {
     }
     twiddle_flag(FRAME_BUFFER);
 
-    return (funcptr) listen_for_button;
+    return (funcptr) print_random_color;
 }
 
-funcptr listen_for_button() {
-    if ( (flags & NEW_INPUT) && input ) {
-        switch_off_input();
-        // button press, start missile
+funcptr print_random_color() {
+    static uint16_t hilbert_linear_pos;
 
-        return (funcptr) missile;
-    }
-    else {
-        return (funcptr) listen_for_button;
-    }
-}
-
-static uint8_t curr;
-
-funcptr missile() {
     if (read_clear_flag(NEXT_ANIM)) {
-        // display the next lighted spot
         for (uint8_t c=0; c<4; c++) {
-            set_hidden_fb( c, c == curr ? 0xf : get_visible_fb(c) );
+            set_hidden_fb(c, lfsr_next());
         }
-        // mask the "missile head" from decay
-        set_hidden_fb(4, (1<<curr));
         twiddle_flag(FRAME_BUFFER);
-
-        if ( flags & DIRECTION ) {
-            if (curr == 0)
-                twiddle_flag(DIRECTION);
-            else
-                curr--;
-        }
-        else {
-            if (curr == 3)
-                twiddle_flag(DIRECTION);
-            else
-                curr++;
-        }
     }
 
-    if (input && read_clear_flag(NEW_INPUT)) return (funcptr) listen_for_button;
-    else
-        return (funcptr) missile;
+    return (funcptr) print_random_color;
 }
 
