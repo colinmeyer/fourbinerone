@@ -22,7 +22,7 @@
 // 
 
 
-#define NEXT_ANIM_COUNT  12000
+#define NEXT_ANIM_COUNT  1200
 
 volatile uint8_t display[4]; // we'll use four bits for each cell
                              // for sixteen shades of gray
@@ -141,7 +141,7 @@ ISR(TIM0_COMPA_vect) {
 typedef int (*funcptr)();          // http://c-faq.com/decl/recurfuncp.html
 typedef funcptr (*ptrfuncptr)();
 
-funcptr setup(), print_random_color();
+funcptr setup(), twelve_bit_gray();
 
 int main(void) {
     //====================================================
@@ -193,19 +193,22 @@ funcptr setup() {
     }
     twiddle_flag(FRAME_BUFFER);
 
-    return (funcptr) print_random_color;
+    return (funcptr) twelve_bit_gray;
 }
 
-funcptr print_random_color() {
-    static uint16_t hilbert_linear_pos;
+funcptr twelve_bit_gray() {
+    static uint16_t c;
 
     if (read_clear_flag(NEXT_ANIM)) {
-        for (uint8_t c=0; c<4; c++) {
-            set_hidden_fb(c, lfsr_next());
-        }
+        uint16_t gray = (c >> 1) ^ c;
+        set_hidden_fb(0,  gray & 0x00f);
+        set_hidden_fb(1, (gray & 0x0f0) >> 4);
+        set_hidden_fb(2, (gray & 0xf00) >> 8);
         twiddle_flag(FRAME_BUFFER);
+        c++;
+        c &= 0xfff;
     }
 
-    return (funcptr) print_random_color;
+    return (funcptr) twelve_bit_gray;
 }
 
