@@ -201,9 +201,22 @@ funcptr twelve_bit_gray() {
 
     if (read_clear_flag(NEXT_ANIM)) {
         uint16_t gray = (c >> 1) ^ c;
-        set_hidden_fb(0,  gray & 0x00f);
-        set_hidden_fb(1, (gray & 0x0f0) >> 4);
-        set_hidden_fb(2, (gray & 0xf00) >> 8);
+        uint8_t point[3] = {0, 0, 0};
+
+        // gray_to_3d mapping: you see, it's recursive
+        // bottom 3 bits is least significant zyx
+        // next   3 bits is next  significant zyx
+        for (uint8_t bit=0; bit < 12; bit++) {
+            if ( gray & (1<<bit) )  // reading bit
+                point[bit % 3] |=   // writing dimention
+                    1<<(bit/3);     // writing bit 
+        }
+
+        // write dimentional data as xyz -> rgb
+        for (uint8_t dim=0; dim < 3; dim++) {
+            set_hidden_fb(dim, point[dim]);
+        }
+
         twiddle_flag(FRAME_BUFFER);
         c++;
         c &= 0xfff;
